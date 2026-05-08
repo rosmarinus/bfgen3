@@ -1,245 +1,373 @@
 #!/usr/bin/env node
-'use strict';
 // 外部モジュールインポート
-const fs = require('fs');
-const path = require('path');
-const yaml = require('js-yaml');
-const svg2ttf = require('svg2ttf');
-const mkdirp = require('mkdirp');
-const program = require('commander');
-
-// 標準の設定ファイル名
-const configFileDefault = 'config.yaml';
-// 標準の設定フォルダ名
-const configDirectory = 'config';
-
-// 設定ファイルが無いときの省略値（必ず設定する）
-// horizAdvX ascent は '*' を指定可能で、値を算出する
-const dataDefault = {
-	'fontFileName': 'brailleFont',
-	'fontName': null,
-	'description': 'eight-dot braille fonts',
-	'version': '1.0',
-	'copyright': '(C) takayan',
-	'url': 'https://github.com/rosmarinus/bfgen',
-	'sixDot': false,
-	'kana': false,
-	'kantenji': true,
-	'shiftKantenji': false,
-	'blackMark': 'dot',
-	'whiteMark': 'dash',
-	'unitsPerEm': 2048,
-	'horizAdvX': '*',
-	'ascent': '*',
-	'descent': -410,
-	'weight': 'normal',
-	'stretch': 'normal',
-	'underlineThickness': 120,
-	'underlinePosition': -240,
-	'xs': 490,
-	'ys': 1250,
-	'dx': 490,
-	'dy': 480,
-	'radius': 170,
-	'thickness': 30,
-	'pinRadius': 50,
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import yaml from "js-yaml";
+import svg2ttf from "svg2ttf";
+import i18n from "i18n";
+import yargs from "yargs/yargs";
+import { hideBin } from "yargs/helpers";
+// 内部モジュールインポート
+import ShapeSeeker from "./shapeseeker.js";
+import ShapeLoader from "./shapeloader.js";
+import Characters from "./lib/table.js";
+import { fontDataDefault } from "./fontdata.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// パッケージ設定ファイル
+const packagejson = JSON.parse(fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"));
+// locale関連
+const localedir = path.join(__dirname, "locales");
+const locales = fs.readdirSync(localedir).reduce((acc, file) => {
+    const ext = ".json";
+    if (path.extname(file) === ext) {
+        acc.push(file.slice(0, -ext.length));
+    }
+    return acc;
+}, []);
+const lang = process.env.LANG?.slice(0, 2) ?? "en";
+const locale = locales.includes(lang) ? lang : "en";
+// i18n設定
+i18n.configure({
+    locales: locales,
+    defaultLocale: locale,
+    directory: localedir,
+});
+// yargs文字列の追加翻訳
+let yargsLocale = {
+    "en": {},
+    "ja": { "boolean": "論理値" },
 };
-let data = {};
-Object.assign(data, dataDefault);
-
-// コマンドラインの処理
-program
-	.version('1.0.0')
-	.option('-c, --config <configFile>', `YAML-formated configuration file name (default: "${configFileDefault}")`)
-	.option('-f, --fontfile <fontFileName>', `font file basename (default: "${data['fontFileName']}")`)
-	.option('-l, --list', 'list configuration files in <config> directory')
-	.option('-s, --shapes', 'list available shapes')
-	.parse(process.argv);
-
-// 不明なパラメータがあるときは、ヘルプを出力して終了する
-if (program.args.length > 0) {
-	if (program.args.length === 1) {
-		console.error(program._name, ": unknown argument: ", program['args'][0]);
-	} else {
-		console.error(program._name, ": unknown arguments: ", program['args'].join(', '));
-	}
-	program.help();
+// 標準の設定ファイル名
+const configFileDefault = "config.yaml";
+// 標準の設定フォルダ名
+const configDirectory = "config";
+// 標準値を代入
+let data = { ...fontDataDefault };
+// コマンドラインオプションの定義
+const options = yargs(hideBin(process.argv))
+    .scriptName(packagejson.name)
+    .locale(locale)
+    .updateStrings(yargsLocale[locale])
+    .usage(i18n.__("Usage: $0 [options]"))
+    .version("version", i18n.__("output the version number"), packagejson.version)
+    .alias("version", "v")
+    .help("help", i18n.__("display help for command"))
+    .alias("help", "h")
+    .option("config", {
+    alias: "c",
+    type: "string",
+    describe: i18n.__("YAML-formated configuration file name"),
+    default: configFileDefault,
+})
+    .option("fontfile", {
+    alias: "f",
+    type: "string",
+    describe: i18n.__("basename of output font file"),
+})
+    .option("list", {
+    alias: "l",
+    type: "boolean",
+    describe: i18n.__("list configuration files in <config> directory"),
+    default: false,
+})
+    .option("shapes", {
+    alias: "s",
+    type: "boolean",
+    describe: i18n.__("list available shapes"),
+    default: false,
+})
+    .strict()
+    .parseSync();
+// 設定ファイルのリスト表示の指示があれば出力する
+if (options.list) {
+    const configDir = path.join(__dirname, configDirectory);
+    console.log(`${i18n.__("configuration directory:")} ${path.join(__dirname, "config")}`);
+    console.log(i18n.__("configuration files:"));
+    fs.readdirSync(configDir).forEach((file) => {
+        if (path.extname(file) === ".yaml") {
+            const conf = yaml.load(fs.readFileSync(path.join(configDir, file), "utf8"));
+            console.log(`${file}\t${conf.description}`);
+        }
+    });
 }
-
-// 設定ファイルのリスト表示の指示があれば、出力して終了する
-if (program['list']) {
-	const configDir = path.join(__dirname, configDirectory);
-	console.log(`configuration files in ${path.join(__dirname, 'config')}`);
-	fs.readdirSync(configDir).forEach(file => {
-		if (path.extname(file) === '.yaml') {
-			const conf = yaml.safeLoad(fs.readFileSync(path.join(configDir, file), 'utf8'));
-			console.log(`${file}\t${conf.description}`);
-		}
-	});
-	process.exit(0);
+// 利用可能な点字の図形リストを出力する
+if (options.shapes) {
+    const shapes = await ShapeSeeker.create(data);
+    console.log(i18n.__("available shapes:"));
+    Object.entries(shapes.whiteMarks).forEach(([key, marks]) => {
+        console.log(`${key}: [${marks.join(", ")}]`);
+    });
 }
-
-// 利用可能な点字の図形リストを出力して終了する
-if (program['shapes']) {
-	const ShapeSeeker = require('./shapeseeker');
-	const shapeSeeker = new ShapeSeeker(data);
-	console.log('available shapes');
-	Object.keys(shapeSeeker.whiteMarks).forEach(
-		key => console.log(key + ': [' + shapeSeeker.whiteMarks[key].join(', ') + ']')
-	);
-	process.exit(0);
+// 上記の出力があれば、終了する。
+if (options.list || options.shapes) {
+    process.exit(0);
 }
-
+// 設定ファイルからの入力データ容器
+let inputData = {};
 // 設定ファイルの読み込み
-const configFile = program['config'] || configFileDefault;
+const configFile = options.config || configFileDefault;
 if (fs.existsSync(configFile)) {
-	console.error(`config: ${configFile}`);
-	data = Object.assign(data, yaml.safeLoad(fs.readFileSync(configFile, 'utf8')));
-} else if (path.dirname(configFile) === '.') {
-	const defaultConfig = path.join(__dirname, configDirectory, configFile);
-	if (fs.existsSync(defaultConfig)) {
-		console.error(`config: ${defaultConfig}`);
-		data = Object.assign(data, yaml.safeLoad(fs.readFileSync(defaultConfig, 'utf8')));
-	} else if (program['config'] != undefined) {
-		console.error(`${program._name} : 設定ファイルが見つかりません: ${configFile}`);
-		process.exit(-1);
-	}
-} else {
-	console.error(`${program._name} : 指定位置に設定ファイルが見つかりません: ${configFile}`);
-	process.exit(-1);
+    console.error(`config: ${configFile}`);
+    inputData = Object.assign(inputData, yaml.load(fs.readFileSync(configFile, "utf8")));
 }
-
-// 要素が無ければ、省略値を入れる
-Object.keys(dataDefault).forEach(
-	item => {
-		if (data[item] === null) data[item] = dataDefault[item]
-	});
-
+else if (path.dirname(configFile) === ".") {
+    const defaultConfig = path.join(__dirname, configDirectory, configFile);
+    if (fs.existsSync(defaultConfig)) {
+        console.error(`config: ${defaultConfig}`);
+        inputData = Object.assign(inputData, yaml.load(fs.readFileSync(defaultConfig, "utf8")));
+    }
+    else if (options.config != undefined) {
+        console.error(`${packagejson.name} : ${i18n.__("configuration file not found")}: ${configFile}`);
+        process.exit(1);
+    }
+}
+else {
+    console.error(`${packagejson.name} : ${i18n.__("configuration file not found")}: ${configFile}`);
+    process.exit(1);
+}
+// 論理型。型が違えば強制終了
+["sixDot", "kana", "kantenji", "shiftKantenji"].forEach((key) => {
+    if (inputData[key] !== null && typeof (inputData[key]) !== "boolean") {
+        console.log(i18n.__("the value of item '%s' is not a boolean type.", key));
+        process.exit(1);
+    }
+});
+// 数値型。型が違えば強制終了。
+[
+    "unitsPerEm",
+    "descent",
+    "underlineThickness",
+    "underlinePosition",
+    "xs",
+    "ys",
+    "dx",
+    "dy",
+    "radius",
+    "pinRadius",
+    "thickness",
+].forEach((key) => {
+    if (inputData[key] !== null && typeof (inputData[key]) !== "number") {
+        console.log(i18n.__("the value of item '%s' is not a numeric type.", key));
+        process.exit(1);
+    }
+});
+// 数値型もしくは*。違えば強制終了
+["horizAdvX", "ascent"].forEach((key) => {
+    if (inputData[key] !== null &&
+        (typeof (inputData[key]) !== "number" && inputData[key] !== "*")) {
+        console.log(i18n.__("the value of item '%s' is neither a numeric type nor '*'.", key));
+        process.exit(1);
+    }
+});
+// 文字列（キーワード)か数値。キーワードの確認はここではしない。
+// 数値でも文字列でもないときは、文字列に変換して続ける。
+["weight"].forEach((key) => {
+    if (inputData[key] !== null && typeof (inputData[key]) !== "string" &&
+        typeof (inputData[key]) !== "number") {
+        inputData[key] = inputData[key].toString();
+    }
+});
+// 文字列。文字列でないときは文字列に変換して続ける。
+[
+    "fontFileName",
+    "fontName",
+    "description",
+    "version",
+    "blackMark",
+    "whiteMark",
+    "stretch",
+    "copyright",
+    "url",
+].forEach((key) => {
+    if (inputData[key] != null && typeof (inputData[key]) !== "string") {
+        inputData[key] = inputData[key].toString();
+    }
+});
+// 入力値があれば入力値とし、なければ省略値とする
+data.fontFileName = inputData.fontFileName ?? data.fontFileName;
+data.fontName = inputData.fontName ?? data.fontName;
+data.description = inputData.description ?? data.description;
+data.version = inputData.version ?? data.version;
+data.copyright = inputData.copyright ?? data.copyright;
+data.url = inputData.url ?? data.url;
+data.sixDot = inputData.sixDot ?? data.sixDot;
+data.kana = inputData.kana ?? data.kana;
+data.kantenji = inputData.kantenji ?? data.kantenji;
+data.shiftKantenji = inputData.shiftKantenji ?? data.shiftKantenji;
+data.blackMark = inputData.blackMark ?? data.blackMark;
+data.whiteMark = inputData.whiteMark ?? data.whiteMark;
+data.unitsPerEm = inputData.unitsPerEm ?? data.unitsPerEm;
+data.horizAdvX = inputData.horizAdvX ?? data.horizAdvX;
+data.ascent = inputData.ascent ?? data.ascent;
+data.descent = inputData.descent ?? data.descent;
+data.weight = inputData.weight ?? data.weight;
+data.stretch = inputData.stretch ?? data.stretch;
+data.underlineThickness = inputData.underlineThickness ?? data.underlineThickness;
+data.xs = inputData.xs ?? data.xs;
+data.ys = inputData.ys ?? data.ys;
+data.dx = inputData.dx ?? data.dx;
+data.dy = inputData.dy ?? data.dy;
+data.radius = inputData.radius ?? data.radius;
+data.thickness = inputData.thickness ?? data.thickness;
+data.pinRadius = inputData.pinRadius ?? data.pinRadius;
 // 文字上端の値
-if (data['ascent'] === '*') {
-	data['ascent'] = data['unitsPerEm'] + data['descent'];
+if (data.ascent === "*") {
+    data.ascent = data.unitsPerEm + data.descent;
 }
-
+// フォントの幅
+if (data.horizAdvX === "*") {
+    data.horizAdvX = data.xs * 2 + data.dx;
+}
 // ファイル名を取得する
-const fileName = program['fontfile'] != undefined ?
-	program['fontfile'] : data['fontFileName'];
-
+const fileName = options.fontfile ?? data.fontFileName;
 // 八点点字を漢点字として扱うか
 //（最上段を追加の点とする。ただしこれだけではユニコード点字の配置は変えない。）
 // 六点点字のみのときは無意味
-data['kantenji'] = data['sixDot'] ? false : data['kantenji'];
-
+data.kantenji = data.sixDot ? false : data.kantenji;
 // 特殊な漢点字のために最下段を最上段にシフトして表示する
 // 始点終点情報をユニコード点字の7点8点で保存した場合用
-data['shiftKantenji'] = data['kantenji'] ? data['shiftKantenji'] : false;
-
-// ユニコード点字範囲
-const start = 0x2800;
-const end = data['sixDot'] ? 0x283f : 0x28ff;
-
-// フォントの幅
-if (data['horizAdvX'] === '*') {
-	data['horizAdvX'] = data['xs'] * 2 + data['dx'];
+data.shiftKantenji = data.kantenji ? data.shiftKantenji : false;
+// 要素の確認
+// Object.keys(data).forEach(
+// 	(item) => {
+// 		console.log(
+// 			"key:",
+// 			item,
+// 			"value-type:",
+// 			typeof (data[item]),
+// 			"value:",
+// 			data[item],
+// 		);
+// 	},
+// );
+// フォントIDは設定要素からアルファベットで自動的に生成する
+const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+const fontID = (data.sixDot ? "Six-" : "Eight-") +
+    capitalize(data.blackMark) +
+    (data.whiteMark === "empty" ? "" : `${capitalize(data.whiteMark)}`) +
+    (data.kantenji ? "-Kantenji" : "-Braille") +
+    (data.shiftKantenji ? "-Shifted" : "");
+// フォント名が指定されていなければ、設定要素から生成する
+if (data.fontName === null) {
+    data.fontName = (data.sixDot ? "six " : "eight ") +
+        data.blackMark +
+        (data.whiteMark === "empty" ? " " : `-${data.whiteMark} `) +
+        (data.kantenji ? "kantenji" : "braille") +
+        (data.shiftKantenji ? " shifted" : "");
 }
-
-// 名前の作成
-const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);
-const fontID = (data['sixDot'] ? 'Six-' : 'Eight-') +
-	capitalize(data['blackMark']) +
-	(data['whiteMark'] === 'empty' ? '' : `${capitalize(data['whiteMark'])}`) +
-	(data['kantenji'] ? '-Kantenji' : '-Braille') +
-	(data['shiftKantenji'] ? '-Shifted' : '');
-
-if (data['fontName'] === null) {
-	data['fontName'] = (data['sixDot'] ? 'six ' : 'eight ') +
-		data['blackMark'] +
-		(data['whiteMark'] === 'empty' ? ' ' : `-${data['whiteMark']} `) +
-		(data['kantenji'] ? 'kantenji' : 'braille') +
-		(data['shiftKantenji'] ? ' shifted' : '');
-}
-
-// 最下段、何もなければ空点の印を除外（六点点字のみを作る場合用）
-const bottomWhiteExclude = data['sixDot'];
-
-// 最上段、何もなければ空点の印を除外（八点点字の下の六点のみを使う場合用）
-// 漢点字の場合、三マス漢点字のニマス目も除外されてしまうので要らない
+// 最下段、何もなければ空点の印を除外（六点点字のみを作る場合に指定）
+const bottomWhiteExclude = data.sixDot;
+// 最上段、何もなければ空点の印を除外（八点点字の下の六点部分を使う場合に指定）
+// 漢点字の場合、三マス漢点字のニマス目も除外されてしまうので使わない
 const topWhiteExclude = false;
-
 // 図形描画関数を設定する
-const Shape = require('./shapeloader');
-const shape = new Shape(data);
-
-// 指定された点字の図形を作成する
-const movement = codeArray => {
-	let result = '';
-	let counter = 0;
-	for (const code of codeArray) {
-		for (const bit of [0, 1, 2, 3, 4, 5, 6, 7]) {
-			const pos = !data['shiftKantenji'] ? {
-				0: [0, 0],
-				1: [0, 1],
-				2: [0, 2],
-				6: [0, 3],
-				3: [1, 0],
-				4: [1, 1],
-				5: [1, 2],
-				7: [1, 3]
-			} : {
-					0: [0, 1],
-					1: [0, 2],
-					2: [0, 3],
-					6: [0, 0],
-					3: [1, 1],
-					4: [1, 2],
-					5: [1, 3],
-					7: [1, 0]
-				};
-			const [x, y] = pos[bit];
-			if ((code - start) & (1 << bit)) {
-				result += shape.blackMovement(x, y, counter);
-			} else if ((!bottomWhiteExclude || ((code - start) >= 0x40) || (bit != 6 && bit != 7)) &&
-				(!topWhiteExclude || ((code - start) & 0b1001 != 0) || (bit != 0 && bit != 3))) {
-				result += shape.whiteMovement(x, y, counter);
-			} else {
-				result += '';
-			}
-		}
-		counter++;
-	}
-	return result;
+let shape = null;
+try {
+    shape = await ShapeLoader.create(data);
 }
-
+catch (e) {
+    if (e instanceof Error) {
+        if (e.message === "unknown blackMark shape: %s") {
+            console.log(i18n.__(e.message, data.blackMark));
+        }
+        else {
+            console.log(i18n.__(e.message));
+        }
+    }
+    process.exit(1);
+}
+// unicode点字の範囲
+const ucb_start = 0x2800;
+const ucb_end = data.sixDot ? 0x283f : 0x28ff;
+// 指定された点字の図形を作成する
+const movement = (codeArray) => {
+    let result = "";
+    let counter = 0;
+    for (const code of codeArray) {
+        for (const bit of [0, 1, 2, 3, 4, 5, 6, 7]) {
+            const pos = !data.shiftKantenji
+                ? {
+                    0: [0, 0],
+                    1: [0, 1],
+                    2: [0, 2],
+                    6: [0, 3],
+                    3: [1, 0],
+                    4: [1, 1],
+                    5: [1, 2],
+                    7: [1, 3],
+                }
+                : {
+                    0: [0, 1],
+                    1: [0, 2],
+                    2: [0, 3],
+                    6: [0, 0],
+                    3: [1, 1],
+                    4: [1, 2],
+                    5: [1, 3],
+                    7: [1, 0],
+                };
+            const pair = pos[bit];
+            const x = pair[0];
+            const y = pair[1];
+            if ((code - ucb_start) & (1 << bit)) {
+                result += shape.blackMovement(x, y, counter);
+            }
+            else if ((!bottomWhiteExclude || ((code - ucb_start) >= 0x40) ||
+                (bit != 6 && bit != 7)) &&
+                (!topWhiteExclude || (((code - ucb_start) & 0b1001) != 0) ||
+                    (bit != 0 && bit != 3))) {
+                result += shape.whiteMovement(x, y, counter);
+            }
+            else {
+                result += "";
+            }
+        }
+        counter++;
+    }
+    return result;
+};
 // グリフデータを作成する
 const generateGryph = (number, code) => {
-	if (number === null || number === '') {
-		return '';
-	}
-	if (typeof (number) === "string" || number instanceof String) {
-		number = number.charCodeAt(0);
-	}
-	const codeArray = isNaN(code) ? [...code].map(ch => ch.charCodeAt(0)) : [code];
-
-	// グリフタグのテンプレートに展開
-	return `\
+    if (number === null || number === "") {
+        return "";
+    }
+    if (typeof number === "string") {
+        number = number.charCodeAt(0);
+    }
+    const codeArray = typeof (code) !== "number"
+        ? [...code].map((ch) => ch.charCodeAt(0))
+        : [code];
+    // グリフタグのテンプレートに展開
+    return `\
       <glyph
-        glyph-name="uni${ number.toString(16).padStart(4, '0').toUpperCase()}"
-        unicode="&#x${ number.toString(16).padStart(4, '0')};"
-        horiz-adv-x="${data['horizAdvX'] * codeArray.length}"
-        d="${ movement(codeArray)}" />`;
-}
-
+        glyph-name="uni${number.toString(16).padStart(4, "0").toUpperCase()}"
+        unicode="&#x${number.toString(16).padStart(4, "0")};"
+        horiz-adv-x="${data.horizAdvX * codeArray.length}"
+        d="${movement(codeArray)}" />`;
+};
 // ユニコード点字のグリフを作成する
-let glyphs = ''
-for (let code = start; code <= end; code++) {
-	glyphs += generateGryph(code, code) + '\n';
-}
-
+// let glyphs = "";
+// for (let code = start; code <= end; code++) {
+// 	glyphs += generateGryph(code, code) + "\n";
+// }
+//const range = Array.from({ length: end - start + 1 }, (_, i) => start + i);
+const range = (s, e) => Array.from({ length: e - s + 1 }, (_, i) => s + i);
+// ユニコード点字
+const glyphs_unicode = range(ucb_start, ucb_end).reduce((acc, ch) => acc + generateGryph(ch, ch) + "\n", "");
+//console.log("glyphs:", glyphs_unicode);
 // 追加テーブルで指定された文字のグリフを作成する
-const Characters = require('./lib/table');
-const characters = new Characters(data);
-Object.keys(characters.table).forEach(key =>
-	glyphs += generateGryph(key, characters.table[key]) + "\n");
-
+//const characters = new Characters(data);
+const glyphs_characters = Object.entries((new Characters(data)).table).reduce((acc, [ch, braille]) => acc + generateGryph(ch, braille) + "\n", "");
+//console.log("glyphs:", glyphs_characters);
+// XMLに挿入する文字列をエスケープする関数
+const escapeXMLAttr = (value) => String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("'", "&apos;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 // SVG XML の作成
 const xml = `\
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
@@ -248,50 +376,51 @@ const xml = `\
   <metadata>
   </metadata>
   <defs>
-    <font horiz-adv-x="${data['unitsPerEm']}" id="${fontID}" >
+    <font horiz-adv-x="${data.unitsPerEm}" id="${escapeXMLAttr(fontID)}" >
       <font-face
-        font-family="${data['fontName']}"
-        units-per-em="${data['unitsPerEm']}"
+        font-family="${escapeXMLAttr(data.fontName)}"
+        units-per-em="${data.unitsPerEm}"
         unicode-range="U+0020-FFEE"
-        font-weight="${data['weight']}"
-        font-stretch="${data['stretch']}"
-        ascent="${data['ascent']}"
-        descent="${data['descent']}"
-        underline-thickness="${data['underlineThickness']}"
-        underline-position="${data['underlinePosition']}"
+        font-weight="${escapeXMLAttr(data.weight)}"
+        font-stretch="${escapeXMLAttr(data.stretch)}"
+        ascent="${data.ascent}"
+        descent="${data.descent}"
+        underline-thickness="${data.underlineThickness}"
+        underline-position="${data.underlinePosition}"
          />
-      <missing-glyph />
-      <glyph glyph-name="nonmarkingreturn"  />
-${glyphs}
+      <missing-glyph d="" />
+      <glyph glyph-name="nonmarkingreturn" d="" />
+${glyphs_unicode}
+${glyphs_characters}
     </font>
   </defs>
 </svg>`;
-
 // ファイル出力
-const options = {
-	'copyright': data['copyright'],
-	'description': data['description'],
-	'url': data['url'],
-	'version': data['version'],
+const xmlOptions = {
+    copyright: data.copyright,
+    description: data.description,
+    url: data.url,
+    version: data.version,
 };
 const parent = path.dirname(fileName);
 fs.stat(parent, (error, stats) => {
-	// 必要ならば出力先フォルダ作成
-	if (error && error.code === 'ENOENT') {
-		try {
-			fs.mkdirSync(parent, { recursive: true });
-		} catch (error) {
-			if (error) {
-				console.error(`${program._name} : 出力先フォルダを作成できません。`);
-				process.exit(-1);
-			}
-		}
-	}
-	console.error(`svg: ${fileName}.svg`);
-	fs.writeFileSync(`${fileName}.svg`, xml, {
-		encoding: 'utf8'
-	});
-	const ttf = svg2ttf(xml, options);
-	console.error(`ttf: ${fileName}.ttf`);
-	fs.writeFileSync(`${fileName}.ttf`, new Buffer.from(ttf.buffer));
+    // 必要ならば出力先フォルダ作成
+    if (error && error.code === "ENOENT") {
+        try {
+            fs.mkdirSync(parent, { recursive: true });
+        }
+        catch (error) {
+            if (error) {
+                console.error(`${packagejson.name} : ${i18n.__("cannot create output directory.")}`);
+                process.exit(1);
+            }
+        }
+    }
+    console.error(`svg: ${fileName}.svg`);
+    fs.writeFileSync(`${fileName}.svg`, xml, {
+        encoding: "utf8",
+    });
+    const ttf = svg2ttf(xml, xmlOptions);
+    console.error(`ttf: ${fileName}.ttf`);
+    fs.writeFileSync(`${fileName}.ttf`, Buffer.from(ttf.buffer));
 });
