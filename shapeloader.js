@@ -6,13 +6,11 @@ module.exports = class ShapeLoader {
         const path = require('path');
 
         const plugins = {};
-        fs.readdirSync(__dirname).forEach(file => {
+        fs.readdirSync("shapes").forEach(file => {
             if (path.extname(file) === '.js') {
                 plugins[file.slice(0, -3)] = path.join("shapes", file);
             }
         });
-        delete plugins['shapeloader'];
-        delete plugins['shapeseeker'];
         delete plugins['shape'];
 
         this.name = data['blackMark'];
