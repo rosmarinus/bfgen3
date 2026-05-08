@@ -6,9 +6,10 @@ module.exports = class ShapeLoader {
         const path = require('path');
 
         const plugins = {};
-        fs.readdirSync("shapes").forEach(file => {
+        const shapedir = path.join(__dirname, "shapes");
+        fs.readdirSync(shapedir).forEach(file => {
             if (path.extname(file) === '.js') {
-                plugins[file.slice(0, -3)] = path.join("shapes", file);
+                plugins[file.slice(0, -3)] = path.join(shapedir, file);
             }
         });
         delete plugins['shape'];
