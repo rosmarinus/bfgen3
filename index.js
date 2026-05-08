@@ -81,7 +81,7 @@ if (program['list']) {
 
 // 利用可能な点字の図形リストを出力して終了する
 if (program['shapes']) {
-	const ShapeSeeker = require('./lib/shapes/shapeseeker');
+	const ShapeSeeker = require('./shapeseeker');
 	const shapeSeeker = new ShapeSeeker(data);
 	console.log('available shapes');
 	Object.keys(shapeSeeker.whiteMarks).forEach(
@@ -166,7 +166,7 @@ const bottomWhiteExclude = data['sixDot'];
 const topWhiteExclude = false;
 
 // 図形描画関数を設定する
-const Shape = require('./lib/shapes/shapeloader');
+const Shape = require('./shapeloader');
 const shape = new Shape(data);
 
 // 指定された点字の図形を作成する

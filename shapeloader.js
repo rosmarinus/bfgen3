@@ -8,7 +8,7 @@ module.exports = class ShapeLoader {
         const plugins = {};
         fs.readdirSync(__dirname).forEach(file => {
             if (path.extname(file) === '.js') {
-                plugins[file.slice(0, -3)] = path.join(__dirname, file);
+                plugins[file.slice(0, -3)] = path.join("shapes", file);
             }
         });
         delete plugins['shapeloader'];
