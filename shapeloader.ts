@@ -7,7 +7,7 @@ import type { FontData } from "./fontdata.js";
 
 type ShapeConstructor = new (data: FontData) => Shape;
 const packagejson = JSON.parse(
-    fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +49,9 @@ export default class ShapeLoader {
         const ShapeModule = module.default;
 
         const shape: Shape = new ShapeModule(data);
+        if (data.whiteMark !== "empty" && !Object.hasOwn(shape.WhiteMovements, data.whiteMark)) {
+            throw new Error("unknown whiteMark shape: %s");
+        }
         this.blackMovement = shape.BlackMovement;
         this.whiteMovement = Object.hasOwn(shape.WhiteMovements, data.whiteMark)
             ? shape.WhiteMovements[data.whiteMark] ?? shape.emptyMovement

@@ -16,6 +16,7 @@
     "configuration directory:": "configuration directory:",
     "configuration files:": "configuration files:",
     "unknown blackMark shape: %s": "unknown blackMark shape: %s",
+    "unknown whiteMark shape: %s": "unknown whiteMark shape: %s",
     "the value of item '%s' is not a numeric type.": "the value of item '%s' is not a numeric type.",
     "the value of item '%s' is neither a numeric type nor '*'.": "the value of item '%s' is neither a numeric type nor '*'.",
     "the value of item '%s' is not a boolean type.": "the value of item '%s' is not a boolean type.",

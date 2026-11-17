@@ -47,6 +47,9 @@ bfgen -c <configファイル名>
 
 ## インストール
 
+ソースから実行する場合は、`npm install` 後に `npm run build` でビルドし、
+`node dist/index.js -h` で起動できます。ソース変更後も `npm run build` を実行してください。
+
 [Node.js](https://nodejs.org/ja)をコンピュータにインストールしたあと、コマンドラインから次のコマンドを実行すると、bfgenコマンドを実行できるようになります。
 
 ```js

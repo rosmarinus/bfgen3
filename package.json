@@ -3,10 +3,11 @@
   "name": "bfgen",
   "version": "2.1.0",
   "description": "generate eight-dot braille fonts.",
-  "main": "index.js",
+  "main": "dist/index.js",
   "bin": {
-    "bfgen": "index.js"
+    "bfgen": "dist/index.js"
   },
+  "files": ["dist", "config", "locales"],
   "config": {
     "shapedir": "shapes"
   },
@@ -24,6 +25,8 @@
     "typescript": "^7.0.2"
   },
   "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
     "tsc": "tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "typecheck": "tsc --noEmit"

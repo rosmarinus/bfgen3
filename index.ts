@@ -21,11 +21,12 @@ const __dirname = path.dirname(__filename);
 
 // パッケージ設定ファイル
 const packagejson = JSON.parse(
-	fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+	fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 
 // locale関連
-const localedir = path.join(__dirname, "locales");
+const resourceDirectory = path.resolve(__dirname, "..");
+const localedir = path.join(resourceDirectory, "locales");
 const locales = fs.readdirSync(localedir).reduce((acc: Array<string>, file: string) => {
 	const ext = ".json";
 	if (path.extname(file) === ext) {
@@ -106,9 +107,9 @@ const options = yargs(hideBin(process.argv))
 
 // 設定ファイルのリスト表示の指示があれば出力する
 if (options.list) {
-	const configDir = path.join(__dirname, configDirectory);
+	const configDir = path.join(resourceDirectory, configDirectory);
 	console.log(
-		`${i18n.__("configuration directory:")} ${path.join(__dirname, "config")
+		`${i18n.__("configuration directory:")} ${configDir
 		}`,
 	);
 	console.log(i18n.__("configuration files:"));
@@ -133,7 +134,7 @@ if (options.shapes) {
 
 // 上記の出力があれば、終了する。
 if (options.list || options.shapes) {
-	process.exit(1);
+	process.exit(0);
 }
 
 // SVG XML Fileも出力する
@@ -154,7 +155,7 @@ if (fs.existsSync(configFile)) {
 		yaml.load(fs.readFileSync(configFile, "utf8")),
 	);
 } else if (path.dirname(configFile) === ".") {
-	const defaultConfig = path.join(__dirname, configDirectory, configFile);
+	const defaultConfig = path.join(resourceDirectory, configDirectory, configFile);
 	if (fs.existsSync(defaultConfig)) {
 		console.error(`config: ${defaultConfig}`);
 		inputData = Object.assign(
@@ -338,8 +339,8 @@ try {
 	shape = await ShapeLoader.create(data);
 } catch (e) {
 	if (e instanceof Error) {
-		if (e.message === "unknown blackMark shape: %s") {
-			console.log(i18n.__(e.message, data.blackMark));
+		if (e.message === "unknown blackMark shape: %s" || e.message === "unknown whiteMark shape: %s") {
+			console.error(i18n.__(e.message, e.message.includes("blackMark") ? data.blackMark : data.whiteMark));
 		} else {
 			console.log(i18n.__(e.message));
 		}

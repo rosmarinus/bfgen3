@@ -6,7 +6,7 @@ import type {FontData} from "./fontdata.js";
 
 type ShapeConstructor = new (data: FontData) => Shape;
 const packagejson = JSON.parse(
-    fs.readFileSync(new URL("./package.json", import.meta.url), "utf8"),
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
 );
 
 const __filename = fileURLToPath(import.meta.url);
