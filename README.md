@@ -50,13 +50,13 @@ bfgen -c <configファイル名>
 [Node.js](https://nodejs.org/ja)をコンピュータにインストールしたあと、コマンドラインから次のコマンドを実行すると、bfgenコマンドを実行できるようになります。
 
 ```js
-npm install -g --allow-git=all https://github.com/rosmarinus/bfgen2
+npm install -g --allow-git=all https://github.com/rosmarinus/bfgen3
 ```
 
 または、yarnを導入済みであれば、
 
 ```js
-yarn global add https://github.com/rosmarinus/bfgen2
+yarn global add https://github.com/rosmarinus/bfgen3
 ```
 
 ## 更新履歴
