@@ -29,3 +29,4 @@ export const fontDataDefault = {
     thickness: 30,
     pinRadius: 50,
 };
+//# sourceMappingURL=fontdata.js.map

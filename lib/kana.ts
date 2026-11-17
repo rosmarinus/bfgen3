@@ -314,6 +314,6 @@ export const kanaTable: { [key: string]: string } = {
 	"｝": "⠜",
 	"～": "⠤",
 	"￥": "⠈",
-	"〓": "\x2800",
-	"無": "\x2800",
+	"〓": "\u2800",
+	"無": "\u2800",
 } as const;

@@ -59,7 +59,7 @@ const options = yargs(hideBin(process.argv))
     alias: "c",
     type: "string",
     describe: i18n.__("YAML-formated configuration file name"),
-    default: configFileDefault,
+    //default: configFileDefault,
 })
     .option("fontfile", {
     alias: "f",
@@ -76,6 +76,12 @@ const options = yargs(hideBin(process.argv))
     alias: "s",
     type: "boolean",
     describe: i18n.__("list available shapes"),
+    default: false,
+})
+    .option("svgxml", {
+    alias: "x",
+    type: "boolean",
+    describe: i18n.__("output SVGXML file"),
     default: false,
 })
     .strict()
@@ -102,7 +108,10 @@ if (options.shapes) {
 }
 // 上記の出力があれば、終了する。
 if (options.list || options.shapes) {
-    process.exit(0);
+    process.exit(1);
+}
+// SVG XML Fileも出力する
+if (options.svgxml) {
 }
 // 設定ファイルからの入力データ容器
 let inputData = {};
@@ -129,7 +138,7 @@ else {
 }
 // 論理型。型が違えば強制終了
 ["sixDot", "kana", "kantenji", "shiftKantenji"].forEach((key) => {
-    if (inputData[key] !== null && typeof (inputData[key]) !== "boolean") {
+    if (inputData[key] != null && typeof (inputData[key]) != "boolean") {
         console.log(i18n.__("the value of item '%s' is not a boolean type.", key));
         process.exit(1);
     }
@@ -148,15 +157,15 @@ else {
     "pinRadius",
     "thickness",
 ].forEach((key) => {
-    if (inputData[key] !== null && typeof (inputData[key]) !== "number") {
+    if (inputData[key] != null && (typeof (inputData[key]) !== "number" || !Number.isFinite(inputData[key]))) {
         console.log(i18n.__("the value of item '%s' is not a numeric type.", key));
         process.exit(1);
     }
 });
 // 数値型もしくは*。違えば強制終了
 ["horizAdvX", "ascent"].forEach((key) => {
-    if (inputData[key] !== null &&
-        (typeof (inputData[key]) !== "number" && inputData[key] !== "*")) {
+    if (inputData[key] != null &&
+        (typeof (inputData[key]) !== "number" || !Number.isFinite(Number(inputData[key]))) && inputData[key] !== "*") {
         console.log(i18n.__("the value of item '%s' is neither a numeric type nor '*'.", key));
         process.exit(1);
     }
@@ -164,7 +173,7 @@ else {
 // 文字列（キーワード)か数値。キーワードの確認はここではしない。
 // 数値でも文字列でもないときは、文字列に変換して続ける。
 ["weight"].forEach((key) => {
-    if (inputData[key] !== null && typeof (inputData[key]) !== "string" &&
+    if (inputData[key] != null && typeof (inputData[key]) != "string" &&
         typeof (inputData[key]) !== "number") {
         inputData[key] = inputData[key].toString();
     }
@@ -181,7 +190,7 @@ else {
     "copyright",
     "url",
 ].forEach((key) => {
-    if (inputData[key] != null && typeof (inputData[key]) !== "string") {
+    if (inputData[key] != null && typeof (inputData[key]) != "string") {
         inputData[key] = inputData[key].toString();
     }
 });
@@ -205,6 +214,7 @@ data.descent = inputData.descent ?? data.descent;
 data.weight = inputData.weight ?? data.weight;
 data.stretch = inputData.stretch ?? data.stretch;
 data.underlineThickness = inputData.underlineThickness ?? data.underlineThickness;
+data.underlinePosition = inputData.underlinePosition ?? data.underlinePosition;
 data.xs = inputData.xs ?? data.xs;
 data.ys = inputData.ys ?? data.ys;
 data.dx = inputData.dx ?? data.dx;
@@ -250,7 +260,7 @@ const fontID = (data.sixDot ? "Six-" : "Eight-") +
     (data.kantenji ? "-Kantenji" : "-Braille") +
     (data.shiftKantenji ? "-Shifted" : "");
 // フォント名が指定されていなければ、設定要素から生成する
-if (data.fontName === null) {
+if (data.fontName == "" || data.fontName == null) {
     data.fontName = (data.sixDot ? "six " : "eight ") +
         data.blackMark +
         (data.whiteMark === "empty" ? " " : `-${data.whiteMark} `) +
@@ -416,11 +426,80 @@ fs.stat(parent, (error, stats) => {
             }
         }
     }
-    console.error(`svg: ${fileName}.svg`);
-    fs.writeFileSync(`${fileName}.svg`, xml, {
-        encoding: "utf8",
-    });
-    const ttf = svg2ttf(xml, xmlOptions);
-    console.error(`ttf: ${fileName}.ttf`);
-    fs.writeFileSync(`${fileName}.ttf`, Buffer.from(ttf.buffer));
+    function* newNameGenerator() {
+        for (let count = 1;; count++) {
+            const candidate = count === 1 ? fileName : `${fileName}(${count})`;
+            if (!(options.svgxml && fs.existsSync(`${candidate}.svg`)) &&
+                !fs.existsSync(`${candidate}.ttf`)) {
+                yield candidate;
+            }
+        }
+    }
+    try {
+        // 変換は一度だけ行い、名前の衝突時には保存だけ再試行する。
+        const ttf = Buffer.from(svg2ttf(xml, xmlOptions).buffer);
+        for (const newFile of newNameGenerator()) {
+            const createdPaths = [];
+            let retryCollision = false;
+            let cleanupFailed = false;
+            const save = (outputPath, content) => {
+                let fd;
+                try {
+                    fd = fs.openSync(outputPath, "wx");
+                }
+                catch (error) {
+                    retryCollision = error.code === "EEXIST";
+                    throw error;
+                }
+                createdPaths.push(outputPath);
+                let writeFailed = false;
+                try {
+                    fs.writeFileSync(fd, content);
+                }
+                catch (error) {
+                    writeFailed = true;
+                    throw error;
+                }
+                finally {
+                    try {
+                        fs.closeSync(fd);
+                    }
+                    catch (closeError) {
+                        if (!writeFailed)
+                            throw closeError;
+                        console.error(`${outputPath} のクローズに失敗しました:`, closeError);
+                    }
+                }
+            };
+            try {
+                if (options.svgxml)
+                    save(`${newFile}.svg`, xml);
+                save(`${newFile}.ttf`, ttf);
+            }
+            catch (error) {
+                // この候補で自分が新規作成したファイルだけを削除する。
+                for (const outputPath of createdPaths.reverse()) {
+                    try {
+                        fs.unlinkSync(outputPath);
+                    }
+                    catch (cleanupError) {
+                        cleanupFailed = true;
+                        console.error(`${outputPath} の削除に失敗しました:`, cleanupError);
+                    }
+                }
+                if (retryCollision && !cleanupFailed)
+                    continue;
+                throw error;
+            }
+            if (options.svgxml)
+                console.error(`svg: ${newFile}.svg`);
+            console.error(`ttf: ${newFile}.ttf`);
+            return;
+        }
+    }
+    catch (error) {
+        console.error("フォントの生成または保存に失敗しました:", error);
+        process.exitCode = 1;
+    }
 });
+//# sourceMappingURL=index.js.map

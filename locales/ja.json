@@ -18,5 +18,6 @@
 	"unknown blackMark shape: %s": "未知の黒点の形です: %s",
 	"the value of item '%s' is not a numeric type.": "項目'%s'の値が数値型ではありません。",
 	"the value of item '%s' is neither a numeric type nor '*'.": "項目'%s'の値が数値型でも'*'でもありません。",
-	"the value of item '%s' is not a boolean type.": "項目'%s'の値が論理型ではありません。"
+	"the value of item '%s' is not a boolean type.": "項目'%s'の値が論理型ではありません。",
+    "some errors occurred during file operations. Please check the error messages above.":"ファイル操作中にエラーが発生しました。上記のエラーメッセージを確認してください。"
 }

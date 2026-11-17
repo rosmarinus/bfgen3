@@ -15,13 +15,15 @@ export default class Table {
             );
 
         // 仮名追加
-        this.table = Object.fromEntries(
-            Object.entries(kanaTable).map(([key, braille]) => [
-                key,
-                (data.kantenji && !data.shiftKantenji)
-                    ? String.fromCharCode(slideDown(braille.charCodeAt(0)))
-                    : braille,
-            ]),
-        );
+        if (data.kana) {
+            this.table = Object.fromEntries(
+                Object.entries(kanaTable).map(([key, braille]) => [
+                    key,
+                    (data.kantenji && !data.shiftKantenji)
+                        ? String.fromCharCode(slideDown(braille.charCodeAt(0)))
+                        : braille,
+                ]),
+            );
+        }
     }
 }

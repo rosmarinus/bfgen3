@@ -16,3 +16,4 @@ export default class Dot extends Shape {
             `a ${data.radius - data.thickness},${data.radius - data.thickness} 0,1,1 ${-(data.radius - data.thickness) * 2},0 Z `;
     }
 }
+//# sourceMappingURL=dot.js.map

@@ -18,3 +18,4 @@ export default class Square extends Shape {
             `h ${data.pinRadius * 2} v ${-data.pinRadius * 2} h ${-data.pinRadius * 2} Z `;
     }
 }
+//# sourceMappingURL=square.js.map

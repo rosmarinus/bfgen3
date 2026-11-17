@@ -41,7 +41,7 @@ export default class ShapeLoader {
 
         this.name = data.blackMark;
 
-        if (plugins[this.name] === undefined) {
+        if (!Object.hasOwn(plugins, this.name)) {
             throw new Error("unknown blackMark shape: %s");
         }
 
@@ -50,7 +50,7 @@ export default class ShapeLoader {
 
         const shape: Shape = new ShapeModule(data);
         this.blackMovement = shape.BlackMovement;
-        this.whiteMovement = data.whiteMark in shape.WhiteMovements
+        this.whiteMovement = Object.hasOwn(shape.WhiteMovements, data.whiteMark)
             ? shape.WhiteMovements[data.whiteMark] ?? shape.emptyMovement
             : shape.emptyMovement;
     }

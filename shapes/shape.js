@@ -34,3 +34,4 @@ export default class Shape {
         return Object.keys(this.whiteMovements);
     }
 }
+//# sourceMappingURL=shape.js.map

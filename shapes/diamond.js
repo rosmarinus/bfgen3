@@ -22,3 +22,4 @@ export default class Diamond extends Shape {
                 data.thickness)} Z `;
     }
 }
+//# sourceMappingURL=diamond.js.map

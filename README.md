@@ -1,11 +1,11 @@
 # bfgen
 
-8-dot braille fonts generator
+8-dot/6-dot braille fonts generator
 
 概要
 
 これはユニコード点字フォントのSVGファイルとTTFファイルを出力する[Node.js](https://nodejs.org/ja)を使ったCLIアプリケーションです。
-具体的には、yamlフォーマットで書かれたフォントのデータを元にsvgファイルを作成し、その内容を[svg2ttf](https://github.com/fontello/svg2ttf#readme)に渡して、TTF（TruType）ファイルを作成しています。
+具体的には、yamlフォーマットで書かれたフォントのデータを元にsvgファイルを作成し、その内容を[svg2ttf](https://github.com/fontello/svg2ttf#readme)に渡して、TTF（TruType）ファイルを作成しています。なお、このとき生成先に同じ名前のファイルがあるときはベース名に(2),(3)という風に番号を付けた名前にします。
 
 通常の点字フォントでは、点の無い場所がただの空白になりますが、これに形を与え、点の配置を視認しやすくしています。
 この空白の点の形を、空白(empty)、空線(dash)、輪郭(outline)、空点(pin)と4種類用意しています。
@@ -29,6 +29,7 @@ Options:
   -f, --fontfile <fontFileName>  font file basename (default: "brailleFont")
   -l, --list                     list configuration files in <config> directory
   -s, --shapes                   list available shapes
+  -x, --svgxml                   output SVG XML file
   -h, --help                     output usage information
 ```
 
@@ -49,7 +50,7 @@ bfgen -c <configファイル名>
 [Node.js](https://nodejs.org/ja)をコンピュータにインストールしたあと、コマンドラインから次のコマンドを実行すると、bfgenコマンドを実行できるようになります。
 
 ```js
-npm install -g https://github.com/rosmarinus/bfgen2
+npm install -g --allow-git=all https://github.com/rosmarinus/bfgen2
 ```
 
 または、yarnを導入済みであれば、
