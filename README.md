@@ -14,7 +14,7 @@
 これらのフォントは square.yaml, diamond.yaml などを使うと作れます。このときファイルでは空白の点は輪郭で描いています。
 
 図形の形を微調整したいときは、config.yaml内の定数の値を変えます。
-形自体を変えたいときは、shape.tsで定義されているshapeクラスを継承してメソッドを記述し、shapesフォルダに配置します。
+形自体を変えたいときは、src/shapes/shape.tsで定義されているshapeクラスを継承してメソッドを記述し、src/shapesフォルダに配置します。
 詳しくは[SVG](https://triple-underscore.github.io/SVG11/index.html)を調べてください。特に[20.8 フォント記述](https://triple-underscore.github.io/SVG11/fonts.html#FontDescriptions)、[8.3 パスデータ](https://triple-underscore.github.io/SVG11/paths.html#PathData)が重要です。
 
 ## 使い方
@@ -49,6 +49,9 @@ bfgen -c <configファイル名>
 
 ソースから実行する場合は、`npm install` 後に `npm run build` でビルドし、
 `node dist/index.js -h` で起動できます。ソース変更後も `npm run build` を実行してください。
+
+TypeScriptのソースは`src/`に配置し、ビルドしたJavaScript・型定義・ソースマップは、ディレクトリ構造を保って`dist/`に出力します。
+設定ファイルの`config/`と翻訳ファイルの`locales/`は、プロジェクト直下に配置します。
 
 [Node.js](https://nodejs.org/ja)をコンピュータにインストールしたあと、コマンドラインから次のコマンドを実行すると、bfgenコマンドを実行できるようになります。
 
