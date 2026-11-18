@@ -1,5 +1,8 @@
 {
 	"hello": "こんにちは",
+	"failed to close file '%s':": "%s のクローズに失敗しました:",
+	"failed to delete file '%s':": "%s の削除に失敗しました:",
+	"failed to generate or save font:": "フォントの生成または保存に失敗しました:",
 	"generate 8-dot/6-dot braille font.": "八点/六点点字フォントを生成します。",
 	"configuration file not found": "設定ファイルが見つかりません",
 	"cannot create output directory.": "出力ディレクトリが作成できません。",
@@ -21,5 +24,5 @@
 	"the value of item '%s' is neither a numeric type nor '*'.": "項目'%s'の値が数値型でも'*'でもありません。",
 	"the value of item '%s' is not a boolean type.": "項目'%s'の値が論理型ではありません。",
 	"some errors occurred during file operations. Please check the error messages above.": "ファイル操作中にエラーが発生しました。上記のエラーメッセージを確認してください。",
-	"output SVGXML file": "output SVGXML file"
+	"output SVGXML file": "SVGXMLファイルも出力する"
 }

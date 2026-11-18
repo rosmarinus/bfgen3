@@ -50,7 +50,6 @@ let yargsLocale: { [key: string]: { [key: string]: string } } = {
 	"ja": { "boolean": "論理値" },
 };
 
-
 // 標準の設定ファイル名
 const configFileDefault: string = "config.yaml";
 // 標準の設定フォルダ名
@@ -136,12 +135,6 @@ if (options.shapes) {
 if (options.list || options.shapes) {
 	process.exit(0);
 }
-
-// SVG XML Fileも出力する
-if (options.svgxml) {
-}
-
-
 
 // 設定ファイルからの入力データ容器
 let inputData: { [key: string]: any } = {};
@@ -294,20 +287,6 @@ data.kantenji = data.sixDot ? false : data.kantenji;
 // 特殊な漢点字のために最下段を最上段にシフトして表示する
 // 始点終点情報をユニコード点字の7点8点で保存した場合用
 data.shiftKantenji = data.kantenji ? data.shiftKantenji : false;
-
-// 要素の確認
-// Object.keys(data).forEach(
-// 	(item) => {
-// 		console.log(
-// 			"key:",
-// 			item,
-// 			"value-type:",
-// 			typeof (data[item]),
-// 			"value:",
-// 			data[item],
-// 		);
-// 	},
-// );
 
 // フォントIDは設定要素からアルファベットで自動的に生成する
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -510,6 +489,7 @@ fs.stat(parent, (error, stats) => {
 		}
 	}
 
+	// フォント名候補ジェネレーター
 	function* newNameGenerator(): Generator<string> {
 		for (let count = 1; ; count++) {
 			const candidate = count === 1 ? fileName : `${fileName}(${count})`;
@@ -550,7 +530,7 @@ fs.stat(parent, (error, stats) => {
 						fs.closeSync(fd);
 					} catch (closeError) {
 						if (!writeFailed) throw closeError;
-						console.error(`${outputPath} のクローズに失敗しました:`, closeError);
+						console.error(i18n.__("failed to close file '%s':", outputPath), closeError);
 					}
 				}
 			};
@@ -565,7 +545,7 @@ fs.stat(parent, (error, stats) => {
 						fs.unlinkSync(outputPath);
 					} catch (cleanupError) {
 						cleanupFailed = true;
-						console.error(`${outputPath} の削除に失敗しました:`, cleanupError);
+						console.error(i18n.__("failed to delete file '%s':", outputPath), cleanupError);
 					}
 				}
 				if (retryCollision && !cleanupFailed) continue;
@@ -577,7 +557,7 @@ fs.stat(parent, (error, stats) => {
 			return;
 		}
 	} catch (error) {
-		console.error("フォントの生成または保存に失敗しました:", error);
+		console.error(i18n.__("failed to generate or save font:"), error);
 		process.exitCode = 1;
 	}
 });

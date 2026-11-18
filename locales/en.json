@@ -1,5 +1,8 @@
 {
     "hello": "hello",
+    "failed to close file '%s':": "failed to close file '%s':",
+    "failed to delete file '%s':": "failed to delete file '%s':",
+    "failed to generate or save font:": "failed to generate or save font:",
     "generate 8-dot/6-dot braille font.": "generate 8-dot/6-dot braille font.",
     "configuration file not found": "configuration file not found",
     "cannot create output directory.": "cannot create output directory.",
@@ -20,5 +23,6 @@
     "the value of item '%s' is not a numeric type.": "the value of item '%s' is not a numeric type.",
     "the value of item '%s' is neither a numeric type nor '*'.": "the value of item '%s' is neither a numeric type nor '*'.",
     "the value of item '%s' is not a boolean type.": "the value of item '%s' is not a boolean type.",
-    "some errors occurred during file operations. Please check the error messages above.":"some errors occurred during file operations. Please check the error messages above."
+    "some errors occurred during file operations. Please check the error messages above.":"some errors occurred during file operations. Please check the error messages above.",
+    "output SVGXML file": "output SVGXML file"
 }
