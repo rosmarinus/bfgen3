@@ -70,8 +70,6 @@ const options = yargs(hideBin(process.argv))
 		packagejson.version,
 	)
 	.alias("version", "v")
-	.help("help", i18n.__("display help for command"))
-	.alias("help", "h")
 	.option("config", {
 		alias: "c",
 		type: "string",
@@ -101,6 +99,8 @@ const options = yargs(hideBin(process.argv))
 		describe: i18n.__("output SVGXML file"),
 		default: false,
 	})
+	.help("help", i18n.__("display help for command"))
+	.alias("help", "h")
 	.strict()
 	.parseSync();
 
@@ -238,33 +238,11 @@ if (fs.existsSync(configFile)) {
 });
 
 // 入力値があれば入力値とし、なければ省略値とする
-data.fontFileName = inputData.fontFileName ?? data.fontFileName;
-data.fontName = inputData.fontName ?? data.fontName;
-data.description = inputData.description ?? data.description;
-data.version = inputData.version ?? data.version;
-data.copyright = inputData.copyright ?? data.copyright;
-data.url = inputData.url ?? data.url;
-data.sixDot = inputData.sixDot ?? data.sixDot;
-data.kana = inputData.kana ?? data.kana;
-data.kantenji = inputData.kantenji ?? data.kantenji;
-data.shiftKantenji = inputData.shiftKantenji ?? data.shiftKantenji;
-data.blackMark = inputData.blackMark ?? data.blackMark;
-data.whiteMark = inputData.whiteMark ?? data.whiteMark;
-data.unitsPerEm = inputData.unitsPerEm ?? data.unitsPerEm;
-data.horizAdvX = inputData.horizAdvX ?? data.horizAdvX;
-data.ascent = inputData.ascent ?? data.ascent;
-data.descent = inputData.descent ?? data.descent;
-data.weight = inputData.weight ?? data.weight;
-data.stretch = inputData.stretch ?? data.stretch;
-data.underlineThickness = inputData.underlineThickness ?? data.underlineThickness;
-data.underlinePosition = inputData.underlinePosition ?? data.underlinePosition;
-data.xs = inputData.xs ?? data.xs;
-data.ys = inputData.ys ?? data.ys;
-data.dx = inputData.dx ?? data.dx;
-data.dy = inputData.dy ?? data.dy;
-data.radius = inputData.radius ?? data.radius;
-data.thickness = inputData.thickness ?? data.thickness;
-data.pinRadius = inputData.pinRadius ?? data.pinRadius;
+Object.assign(data, Object.fromEntries(
+	Object.entries(data).map(([key, defaultValue]) => [
+		key, inputData[key] ?? defaultValue,
+	]),
+));
 
 // 文字上端の値
 if (data.ascent === "*") {

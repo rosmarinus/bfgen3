@@ -1,5 +1,5 @@
 # 出力フォントファイル名
-fontFileName: fonts/braillePinPoint
+fontFileName: fonts/braillePinPoint6
 # フォント名（省略した時は点の数などから自動的に英字で作成する）
 #fontName: 空点付八点点字
 # 説明

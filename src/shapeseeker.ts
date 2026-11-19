@@ -33,8 +33,6 @@ export default class ShapeSeeker {
                 plugins[file.slice(0, -ext.length)] = path.join(shapedir, file);
             }
         });
-
-        // 基底クラスファイルの除外
         delete plugins.shape;
 
         this.whiteMarks = {};
